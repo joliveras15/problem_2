@@ -1,0 +1,69 @@
+---
+title: "Data visualization problem set"
+output: html_notebook
+---
+
+## Measles
+
+1.  Load the dslabs package and figure out what is in the us_contagious_diseases dataset. Create a data frame, call it avg, that has a column for year, and a rate column containing the cases of Measles per 10,000 people per year in the US. Because we start in 1928, exclude Alaska and Hawaii. Make sure to take into account the number of weeks reporting each year. If a week was not report, it should not be included in the calculation of the rate.
+
+```{r}
+library(tidyverse)
+library(dslabs)
+
+# Load the us_contagious_diseases dataset
+data("us_contagious_diseases")
+
+# Check the structure and summary of the dataset
+str(us_contagious_diseases)
+summary(us_contagious_diseases)
+
+#Naming Measles
+the_disease <- "Measles"
+
+#Calculate avg
+avg <- us_contagious_diseases |>
+  filter(!state %in% c("Hawaii","Alaska") & disease == the_disease) |>
+  mutate(rate = count / population * 10000 * 52 / weeks_reporting)
+
+print(avg)
+```
+
+2. Use the data frame avg to make a trend plot showing the cases rate for Measles per year. Add a vertical line showing the year the Measles vaccines was introduced.
+
+```{r}
+library(ggplot2)
+
+avg |> filter(!is.na(rate)) |>
+  ggplot(aes(year, rate)) +
+  geom_line() + 
+  ylab("Cases per 10,000")  + 
+  geom_vline(xintercept = 1963, col = "blue")
+```
+
+3. Add a grey trend line for each state to the plot above. Use a transformation that keeps the high rates from dominating the figure.
+
+```{r}
+avg |> filter(!is.na(rate)) |>
+  ggplot(aes(year, rate)) +
+  geom_line() +
+  geom_smooth(method = "lm", formula = y ~ log(x), color = "grey", se = FALSE) +
+  ylab("Cases per 10,000") +
+  geom_vline(xintercept = 1963, col = "blue")
+```
+
+4. In the plot above we can't tell which state is which curve. Using color would be challenging as it is hard if not impossible to find 48 colors humans can distinguish. To make a plot where you can compare states knowing which is which, use one of the axis for state and the other for year, and then use hue or intensity as a visual cue for rates. Use a sqrt transformation to avoid the higher rates taking up all the color scale. Use grey to denote missing data. Order the states based on their highest peak. You can include Hawaii and Alaska.
+```{r}
+library(RColorBrewer)
+avg |> ggplot(aes(year, state, fill = rate)) +
+  geom_tile(color = "grey50") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "sqrt") +
+  geom_vline(xintercept = 1963, col = "blue") +
+  theme_minimal() +  
+  theme(panel.grid = element_blank(), 
+        legend.position = "bottom", 
+        text = element_text(size = 8)) +
+  labs(title = the_disease, x = "", y = "")
+```
+
